@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.mapbox.geojson.Point
 import dagger.hilt.android.lifecycle.HiltViewModel
 import es.iessaladillo.rafamartinez.supermanzanares.data.repository.MapboxRepository
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -17,9 +19,12 @@ class MapboxViewModel @Inject constructor(
 
     private val _suggestions = MutableStateFlow<List<String>>(emptyList())
     val suggestions: StateFlow<List<String>> get() = _suggestions
+    private var suggestionsJob: Job? = null
 
     fun fetchSuggestions(query: String, location: Pair<Double, Double>?) {
-        viewModelScope.launch {
+        suggestionsJob?.cancel()
+        suggestionsJob = viewModelScope.launch {
+            delay(350)
             try {
                 val results = repository.getSuggestions(query, location)
                 _suggestions.value = results
@@ -30,6 +35,7 @@ class MapboxViewModel @Inject constructor(
     }
 
     fun clearSuggestions() {
+        suggestionsJob?.cancel()
         _suggestions.value = emptyList()
     }
 

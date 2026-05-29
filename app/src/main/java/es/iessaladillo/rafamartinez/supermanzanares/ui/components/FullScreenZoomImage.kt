@@ -18,8 +18,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import coil.size.Precision
 
 @Composable
 fun FullScreenZoomImage(
@@ -29,6 +33,15 @@ fun FullScreenZoomImage(
     var offsetX by remember { mutableFloatStateOf(0f) }
     var offsetY by remember { mutableFloatStateOf(0f) }
     val animatedAlpha by animateFloatAsState(targetValue = 1f, label = "image alpha")
+    val context = LocalContext.current
+    val imageRequest = remember(imageUrl) {
+        ImageRequest.Builder(context)
+            .data(imageUrl)
+            .size(1400, 1400)
+            .precision(Precision.INEXACT)
+            .crossfade(false)
+            .build()
+    }
 
     LaunchedEffect(imageUrl) {
         scale = 1f
@@ -44,8 +57,9 @@ fun FullScreenZoomImage(
         contentAlignment = Alignment.Center
     ) {
         AsyncImage(
-            model = imageUrl,
+            model = imageRequest,
             contentDescription = "Zoomed Image",
+            contentScale = ContentScale.Fit,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp)

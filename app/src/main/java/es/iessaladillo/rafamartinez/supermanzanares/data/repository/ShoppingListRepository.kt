@@ -88,6 +88,9 @@ class ShoppingListRepository @Inject constructor(
     fun getItemsFromList(listId: Int): Flow<List<ShoppingListItemEntity>> =
         shoppingListDao.getItemsFromList(listId)
 
+    fun getAllItems(): Flow<List<ShoppingListItemEntity>> =
+        shoppingListDao.getAllItems()
+
     fun getAllProducts(): Flow<List<Product>> =
         productDao.getAllProducts().map { list -> list.map { it.toDomain() } }
 

@@ -17,6 +17,9 @@ interface ShoppingListDao {
     @Query("SELECT * FROM shopping_lists_items WHERE listId = :listId")
     fun getItemsFromList(listId: Int): Flow<List<ShoppingListItemEntity>>
 
+    @Query("SELECT * FROM shopping_lists_items")
+    fun getAllItems(): Flow<List<ShoppingListItemEntity>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun addItemToList(shoppingListItem: ShoppingListItemEntity)
 

@@ -5,12 +5,17 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface CartDao {
     @Query("SELECT * FROM cart_items")
     fun getCartItems(): Flow<List<CartItemEntity>>
+
+    @Transaction
+    @Query("SELECT * FROM cart_items")
+    fun getCartItemsWithProducts(): Flow<List<CartItemWithProduct>>
 
     @Query("SELECT * FROM cart_items WHERE productId = :productId LIMIT 1")
     fun getCartItemById(productId: String): Flow<CartItemEntity?>

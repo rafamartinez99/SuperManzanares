@@ -1,9 +1,11 @@
 package es.iessaladillo.rafamartinez.supermanzanares.di
 
 import com.google.firebase.auth.FirebaseAuth
+import android.content.Context
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import es.iessaladillo.rafamartinez.supermanzanares.data.local.CartDao
 import es.iessaladillo.rafamartinez.supermanzanares.data.local.CategoryDao
@@ -40,8 +42,10 @@ object RepositoryModule {
     @Provides
     @Singleton
     fun provideProductRepository(
-        productDao: ProductDao, firebaseService: FirebaseService
-    ): ProductRepository = ProductRepository(productDao, firebaseService)
+        productDao: ProductDao,
+        firebaseService: FirebaseService,
+        @ApplicationContext context: Context
+    ): ProductRepository = ProductRepository(productDao, firebaseService, context)
 
     @Provides
     @Singleton

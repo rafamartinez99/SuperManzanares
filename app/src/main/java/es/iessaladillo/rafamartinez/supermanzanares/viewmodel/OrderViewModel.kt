@@ -8,7 +8,7 @@ import es.iessaladillo.rafamartinez.supermanzanares.data.local.ProductEntity
 import es.iessaladillo.rafamartinez.supermanzanares.data.model.Order
 import es.iessaladillo.rafamartinez.supermanzanares.data.model.OrderItem
 import es.iessaladillo.rafamartinez.supermanzanares.data.repository.OrderRepository
-import javax.inject.Inject
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -17,9 +17,24 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
+import javax.inject.Inject
 
 @HiltViewModel
 class OrderViewModel @Inject constructor(private val repository: OrderRepository) : ViewModel() {
+
+    private val _errorMessage = MutableStateFlow<String?>(null)
+    val errorMessage: StateFlow<String?> = _errorMessage
+
+    private val _orderPlaced = MutableStateFlow(false)
+    val orderPlaced: StateFlow<Boolean> = _orderPlaced
+
+    fun clearError() {
+        _errorMessage.value = null
+    }
+
+    fun resetOrderPlaced() {
+        _orderPlaced.value = false
+    }
 
     fun getOrders(userId: String): StateFlow<List<Order>> {
         return repository.getOrders(userId).stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
@@ -27,7 +42,12 @@ class OrderViewModel @Inject constructor(private val repository: OrderRepository
 
     fun placeOrder(userId: String, order: Order) {
         viewModelScope.launch {
-            repository.placeOrder(userId, order)
+            try {
+                repository.placeOrder(userId, order)
+                _orderPlaced.value = true
+            } catch (e: Exception) {
+                _errorMessage.value = e.message ?: "Error al procesar el pedido"
+            }
         }
     }
 
@@ -43,5 +63,4 @@ class OrderViewModel @Inject constructor(private val repository: OrderRepository
             total = total
         )
     }
-
 }

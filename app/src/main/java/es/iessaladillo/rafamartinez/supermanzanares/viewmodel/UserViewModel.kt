@@ -36,8 +36,9 @@ class UserViewModel @Inject constructor(
                 if (loadedUser != null && FirebaseAuth.getInstance().currentUser?.email != loadedUser.email) {
                     setUserMessage("Tu correo ha sido modificado correctamente.")
                 }
-            }.onFailure {
+            }.onFailure { e ->
                 _user.value = null
+                _userMessage.value = e.message ?: "Error al cargar el perfil"
             }
         }
     }

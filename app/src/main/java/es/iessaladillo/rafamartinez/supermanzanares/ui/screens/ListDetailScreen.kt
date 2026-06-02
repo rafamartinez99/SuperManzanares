@@ -1,4 +1,4 @@
-package es.iessaladillo.rafamartinez.supermanzanares.ui.screens
+﻿package es.iessaladillo.rafamartinez.supermanzanares.ui.screens
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -15,6 +15,10 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -35,24 +39,51 @@ import coil.request.ImageRequest
 import es.iessaladillo.rafamartinez.supermanzanares.viewmodel.ShoppingListViewModel
 import es.iessaladillo.rafamartinez.supermanzanares.utils.normalize
 import java.util.Locale
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ListDetailScreen(
     listId: Int, shoppingListViewModel: ShoppingListViewModel, navController: NavController
 ) {
-    val items by shoppingListViewModel.observeItemsForList(listId).collectAsState()
-    val allProducts by shoppingListViewModel.allProducts.collectAsState(initial = emptyList())
+    val items by shoppingListViewModel.observeItemsForList(listId).collectAsStateWithLifecycle()
+    val allProducts by shoppingListViewModel.allProducts.collectAsStateWithLifecycle()
     var searchQuery by remember { mutableStateOf("") }
     val shoppingList =
-        shoppingListViewModel.getShoppingListById(listId).collectAsState(initial = null).value
+        shoppingListViewModel.getShoppingListById(listId).collectAsStateWithLifecycle(initialValue = null).value
     val listName = shoppingList?.name ?: "Lista"
     val totalProducts = items.size
 
-    val normalizedQuery = normalize(searchQuery)
-    val filteredProducts = allProducts.filter { normalize(it.name).contains(normalizedQuery) }
+    val filteredProducts by remember(allProducts, searchQuery) {
+        derivedStateOf {
+            val q = normalize(searchQuery)
+            allProducts.filter { normalize(it.name).contains(q) }
+        }
+    }
     var showDeleteDialog by remember { mutableStateOf(false) }
+    val errorMessage by shoppingListViewModel.errorMessage.collectAsStateWithLifecycle(initialValue = null)
+    val snackbarHostState = remember { SnackbarHostState() }
 
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            shoppingListViewModel.clearError()
+        }
+    }
+
+    @Suppress("UnusedMaterial3ScaffoldPaddingParameter")
+    Scaffold(
+        contentWindowInsets = WindowInsets(0),
+        snackbarHost = {
+            SnackbarHost(snackbarHostState) { data ->
+                Snackbar(
+                    snackbarData = data,
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer
+                )
+            }
+        }
+    ) { _ ->
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(title = {
             Text(
@@ -140,13 +171,14 @@ fun ListDetailScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),
                 ) {
-                    items(filteredProducts) { product ->
+                    items(filteredProducts, key = { it.id }) { product ->
                         val isInList = items.any { it.productId == product.id }
 
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 4.dp)
+                                .animateItem()
                                 .clickable { navController.navigate("product_detail/${product.id}") },
                             shape = RoundedCornerShape(12.dp),
                             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
@@ -256,7 +288,11 @@ fun ListDetailScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            if (items.isEmpty()) {
+            AnimatedVisibility(
+                visible = items.isEmpty(),
+                enter = fadeIn() + scaleIn(initialScale = 0.85f),
+                exit = fadeOut()
+            ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -277,11 +313,12 @@ fun ListDetailScreen(
                         style = MaterialTheme.typography.bodyLarge
                     )
                 }
-            } else {
+            }
+            if (items.isNotEmpty()) {
                 LazyColumn(
                     modifier = Modifier.padding(horizontal = 16.dp)
                 ) {
-                    items(items) { item ->
+                    items(items, key = { it.productId }) { item ->
                         val product = allProducts.find { it.id == item.productId }
                         val quantity = item.quantity
 
@@ -289,6 +326,7 @@ fun ListDetailScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 8.dp)
+                                .animateItem()
                                 .clickable {
                                     navController.navigate("product_detail/${item.productId}")
                                 },
@@ -500,6 +538,7 @@ fun ListDetailScreen(
             },
             containerColor = MaterialTheme.colorScheme.surface
         )
+    }
     }
 }
 

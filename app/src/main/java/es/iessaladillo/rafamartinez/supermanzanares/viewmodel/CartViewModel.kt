@@ -7,12 +7,13 @@ import es.iessaladillo.rafamartinez.supermanzanares.data.local.CartItemEntity
 import es.iessaladillo.rafamartinez.supermanzanares.data.local.ProductEntity
 import es.iessaladillo.rafamartinez.supermanzanares.data.repository.CartRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
-import javax.inject.Inject
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 @HiltViewModel
 class CartViewModel @Inject constructor(private val repository: CartRepository) : ViewModel() {
@@ -34,21 +35,40 @@ class CartViewModel @Inject constructor(private val repository: CartRepository) 
         }
     }.stateIn(viewModelScope, SharingStarted.Lazily, 0.0)
 
+    private val _errorMessage = MutableStateFlow<String?>(null)
+    val errorMessage: StateFlow<String?> = _errorMessage
+
+    fun clearError() {
+        _errorMessage.value = null
+    }
+
     fun addToCart(productId: String, quantity: Int = 1) {
         viewModelScope.launch {
-            repository.insertOrUpdateCartItem(productId, quantity)
+            try {
+                repository.insertOrUpdateCartItem(productId, quantity)
+            } catch (e: Exception) {
+                _errorMessage.value = e.message ?: "Error al añadir al carrito"
+            }
         }
     }
 
     fun removeFromCart(cartItem: CartItemEntity) {
         viewModelScope.launch {
-            repository.removeCartItemEntity(cartItem)
+            try {
+                repository.removeCartItemEntity(cartItem)
+            } catch (e: Exception) {
+                _errorMessage.value = e.message ?: "Error al eliminar del carrito"
+            }
         }
     }
 
     fun clearCart() {
         viewModelScope.launch {
-            repository.clearCart()
+            try {
+                repository.clearCart()
+            } catch (e: Exception) {
+                _errorMessage.value = e.message ?: "Error al vaciar el carrito"
+            }
         }
     }
 
@@ -58,21 +78,27 @@ class CartViewModel @Inject constructor(private val repository: CartRepository) 
 
     fun removeFromCart(productId: String) {
         viewModelScope.launch {
-            repository.removeCartItemById(productId)
+            try {
+                repository.removeCartItemById(productId)
+            } catch (e: Exception) {
+                _errorMessage.value = e.message ?: "Error al eliminar del carrito"
+            }
         }
     }
 
     fun decreaseQuantity(productId: String) {
         viewModelScope.launch {
-            repository.decreaseCartItemQuantity(productId)
+            try {
+                repository.decreaseCartItemQuantity(productId)
+            } catch (e: Exception) {
+                _errorMessage.value = e.message ?: "Error al actualizar cantidad"
+            }
         }
     }
 
-    fun getTotalDifferentProducts() : Flow<Int> {
-        return cart.map { cartItems->
-            cartItems.distinctBy { (cartItem, product) ->
-                product?.id
-            }.size
+    fun getTotalDifferentProducts(): Flow<Int> {
+        return cart.map { cartItems ->
+            cartItems.distinctBy { (_, product) -> product?.id }.size
         }
     }
 }

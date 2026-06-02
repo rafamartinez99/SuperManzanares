@@ -1,4 +1,4 @@
-package es.iessaladillo.rafamartinez.supermanzanares.ui.screens
+﻿package es.iessaladillo.rafamartinez.supermanzanares.ui.screens
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,26 +23,27 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import es.iessaladillo.rafamartinez.supermanzanares.viewmodel.CartViewModel
 import es.iessaladillo.rafamartinez.supermanzanares.viewmodel.OrderViewModel
 import es.iessaladillo.rafamartinez.supermanzanares.viewmodel.UserViewModel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -53,18 +54,46 @@ fun OrderConfirmationScreen(
     orderViewModel: OrderViewModel,
     userViewModel: UserViewModel
 ) {
-    val cartItemsWithProducts by cartViewModel.cart.collectAsState(initial = emptyList())
+    val cartItemsWithProducts by cartViewModel.cart.collectAsStateWithLifecycle()
     val total = cartItemsWithProducts.sumOf { (cartItem, product) ->
         (product?.price ?: 0.0) * cartItem.quantity
     }
     var deliveryOption by remember { mutableStateOf("Envío a domicilio") }
     var paymentMethod by remember { mutableStateOf("Tarjeta de crédito") }
-    val user by userViewModel.user.collectAsState()
+    val user by userViewModel.user.collectAsStateWithLifecycle()
     val userId = user?.id ?: ""
     var isLoading by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
+
+    val orderPlaced by orderViewModel.orderPlaced.collectAsStateWithLifecycle()
+    val errorMessage by orderViewModel.errorMessage.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(orderPlaced) {
+        if (orderPlaced) {
+            orderViewModel.resetOrderPlaced()
+            isLoading = false
+            navController.navigate("order_success")
+        }
+    }
+
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let {
+            isLoading = false
+            snackbarHostState.showSnackbar(it)
+            orderViewModel.clearError()
+        }
+    }
 
     Scaffold(
+        snackbarHost = {
+            SnackbarHost(snackbarHostState) { data ->
+                Snackbar(
+                    snackbarData = data,
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer
+                )
+            }
+        },
         topBar = {
             TopAppBar(
                 title = { Text("Confirmar Pedido", fontSize = 20.sp, fontWeight = FontWeight.Bold) },
@@ -125,7 +154,10 @@ fun OrderConfirmationScreen(
                     Text("Método de entrega: $deliveryOption")
                     Text("Método de pago: $paymentMethod")
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("Total: ${String.format(Locale.forLanguageTag("es-ES"), "%.2f", total)} €", fontWeight = FontWeight.Bold)
+                    Text(
+                        "Total: ${String.format(Locale.forLanguageTag("es-ES"), "%.2f", total)} €",
+                        fontWeight = FontWeight.Bold
+                    )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         "💡 El pago es simulado. No se requieren datos reales.",
@@ -140,13 +172,8 @@ fun OrderConfirmationScreen(
             Button(
                 onClick = {
                     isLoading = true
-                    scope.launch {
-                        val order = orderViewModel.createOrder(cartItemsWithProducts)
-                        orderViewModel.placeOrder(userId, order)
-                        delay(1500)
-                        isLoading = false
-                        navController.navigate("order_success")
-                    }
+                    val order = orderViewModel.createOrder(cartItemsWithProducts)
+                    orderViewModel.placeOrder(userId, order)
                 },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !isLoading

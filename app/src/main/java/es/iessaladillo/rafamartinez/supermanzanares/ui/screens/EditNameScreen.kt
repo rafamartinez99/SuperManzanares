@@ -1,4 +1,4 @@
-package es.iessaladillo.rafamartinez.supermanzanares.ui.screens
+﻿package es.iessaladillo.rafamartinez.supermanzanares.ui.screens
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -36,13 +36,14 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import es.iessaladillo.rafamartinez.supermanzanares.utils.formatName
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditNameScreen(
     navController: NavController, userViewModel: UserViewModel
 ) {
-    val user by userViewModel.user.collectAsState()
+    val user by userViewModel.user.collectAsStateWithLifecycle()
     var nombre by remember { mutableStateOf("") }
     var apellidos by remember { mutableStateOf("") }
 

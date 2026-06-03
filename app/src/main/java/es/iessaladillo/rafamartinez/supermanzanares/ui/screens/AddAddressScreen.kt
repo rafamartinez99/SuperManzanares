@@ -1,4 +1,4 @@
-package es.iessaladillo.rafamartinez.supermanzanares.ui.screens
+﻿package es.iessaladillo.rafamartinez.supermanzanares.ui.screens
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -42,6 +42,7 @@ import es.iessaladillo.rafamartinez.supermanzanares.data.model.User
 import es.iessaladillo.rafamartinez.supermanzanares.utils.getCurrentLocation
 import es.iessaladillo.rafamartinez.supermanzanares.utils.getCurrentLocationAndFetchAddress
 import es.iessaladillo.rafamartinez.supermanzanares.viewmodel.UserViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @SuppressLint("MissingPermission")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -52,7 +53,7 @@ fun AddAddressScreen(
     mapboxViewModel: MapboxViewModel,
     origin: String
 ) {
-    val suggestions by mapboxViewModel.suggestions.collectAsState()
+    val suggestions by mapboxViewModel.suggestions.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 

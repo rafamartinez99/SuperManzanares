@@ -1,4 +1,4 @@
-package es.iessaladillo.rafamartinez.supermanzanares.ui.screens
+﻿package es.iessaladillo.rafamartinez.supermanzanares.ui.screens
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -27,9 +27,9 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.google.firebase.auth.FirebaseAuth
 import es.iessaladillo.rafamartinez.supermanzanares.viewmodel.AuthViewModel
 import kotlinx.coroutines.delay
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
 fun RegisterScreen(
@@ -46,8 +46,8 @@ fun RegisterScreen(
     val passwordVisible = remember { mutableStateOf(false) }
     val repeatPasswordVisible = remember { mutableStateOf(false) }
 
-    val message by authViewModel.message.collectAsState()
-    val isAuthenticated by authViewModel.authState.collectAsState()
+    val message by authViewModel.message.collectAsStateWithLifecycle()
+    val isAuthenticated by authViewModel.authState.collectAsStateWithLifecycle()
 
     var passwordError by remember { mutableStateOf(false) }
     var repeatPasswordError by remember { mutableStateOf(false) }
@@ -68,7 +68,7 @@ fun RegisterScreen(
 
     LaunchedEffect(isAuthenticated) {
         if (isAuthenticated) {
-            FirebaseAuth.getInstance().currentUser?.sendEmailVerification()
+            authViewModel.sendEmailVerification()
             showVerificationDialog = true
         }
     }

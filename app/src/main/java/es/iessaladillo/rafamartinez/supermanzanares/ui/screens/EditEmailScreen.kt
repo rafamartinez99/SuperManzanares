@@ -1,4 +1,4 @@
-package es.iessaladillo.rafamartinez.supermanzanares.ui.screens
+﻿package es.iessaladillo.rafamartinez.supermanzanares.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -15,13 +15,14 @@ import com.google.firebase.auth.FirebaseAuth
 import es.iessaladillo.rafamartinez.supermanzanares.ui.components.PasswordConfirmationDialog
 import es.iessaladillo.rafamartinez.supermanzanares.viewmodel.UserViewModel
 import kotlinx.coroutines.launch
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditEmailScreen(
     navController: NavController, userViewModel: UserViewModel
 ) {
-    val user by userViewModel.user.collectAsState()
+    val user by userViewModel.user.collectAsStateWithLifecycle()
     var email by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }

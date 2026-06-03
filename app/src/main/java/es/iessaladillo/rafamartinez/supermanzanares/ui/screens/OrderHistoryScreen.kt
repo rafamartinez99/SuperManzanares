@@ -29,7 +29,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,11 +38,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import es.iessaladillo.rafamartinez.supermanzanares.data.model.Order
 import es.iessaladillo.rafamartinez.supermanzanares.viewmodel.CartViewModel
 import es.iessaladillo.rafamartinez.supermanzanares.viewmodel.OrderViewModel
 import es.iessaladillo.rafamartinez.supermanzanares.viewmodel.UserViewModel
+import kotlinx.coroutines.flow.collectLatest
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -55,7 +56,7 @@ fun OrderHistoryScreen(
     cartViewModel: CartViewModel,
     navController: NavController
 ) {
-    val user by userViewModel.user.collectAsState()
+    val user by userViewModel.user.collectAsStateWithLifecycle()
 
     var orders by remember { mutableStateOf<List<Order>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
@@ -63,9 +64,9 @@ fun OrderHistoryScreen(
 
     LaunchedEffect(user) {
         user?.let {
-            orderViewModel.getOrders(it.id).collect { fetchedOrders ->
+            orderViewModel.getOrders(it.id).collectLatest { fetchedOrders ->
                 orders = fetchedOrders.sortedByDescending { order ->
-                    formatter.parse(order.date)
+                    runCatching { formatter.parse(order.date) }.getOrNull()
                 }
                 isLoading = false
             }
@@ -90,9 +91,7 @@ fun OrderHistoryScreen(
         when {
             user == null || isLoading -> {
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding),
+                    modifier = Modifier.fillMaxSize().padding(padding),
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator()
@@ -101,18 +100,14 @@ fun OrderHistoryScreen(
 
             orders.isEmpty() -> {
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(padding),
+                    modifier = Modifier.fillMaxSize().padding(padding),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(
                             imageVector = Icons.Outlined.Inventory,
                             contentDescription = "Sin pedidos",
-                            modifier = Modifier
-                                .size(50.dp)
-                                .padding(bottom = 16.dp),
+                            modifier = Modifier.size(50.dp).padding(bottom = 16.dp),
                             tint = MaterialTheme.colorScheme.primary
                         )
                         Text("No tienes pedidos aún", fontSize = 16.sp)
@@ -121,7 +116,6 @@ fun OrderHistoryScreen(
                 }
             }
 
-
             else -> {
                 LazyColumn(
                     contentPadding = padding,
@@ -129,11 +123,12 @@ fun OrderHistoryScreen(
                         .fillMaxSize()
                         .padding(horizontal = 16.dp)
                 ) {
-                    items(orders) { order ->
+                    items(orders, key = { it.id }) { order ->
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 8.dp),
+                                .padding(vertical = 8.dp)
+                                .animateItem(),
                             shape = RoundedCornerShape(12.dp),
                             elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -143,17 +138,13 @@ fun OrderHistoryScreen(
                                     "Pedido realizado el ${order.date}",
                                     fontWeight = FontWeight.Bold
                                 )
-
                                 Spacer(modifier = Modifier.height(4.dp))
-
                                 Text("Estado: ${order.status}", fontSize = 14.sp)
-
                                 Spacer(modifier = Modifier.height(4.dp))
 
                                 val maxItems = 5
                                 val productosResumen = order.products.take(maxItems)
                                     .joinToString(", ") { "${it.quantity}x ${it.productName}" }
-
                                 val restantes = order.products.size - maxItems
                                 val resumenFinal = if (restantes > 0) {
                                     "$productosResumen, +$restantes más"
@@ -167,20 +158,17 @@ fun OrderHistoryScreen(
                                     color = MaterialTheme.colorScheme.onBackground,
                                     modifier = Modifier.padding(top = 4.dp)
                                 )
-
                                 Spacer(modifier = Modifier.height(12.dp))
-
                                 Text(
-                                    "Total: ${
-                                        String.format(
-                                            Locale.forLanguageTag("es-ES"), "%.2f", order.total
-                                        )
-                                    } €", fontWeight = FontWeight.Bold, fontSize = 16.sp
+                                    "Total: ${String.format(Locale.forLanguageTag("es-ES"), "%.2f", order.total)} €",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp
                                 )
-
                                 Spacer(modifier = Modifier.height(4.dp))
-
-                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
                                     Button(onClick = {
                                         order.products.forEach { item ->
                                             cartViewModel.addToCart(item.productId, item.quantity)
@@ -189,7 +177,6 @@ fun OrderHistoryScreen(
                                         Text("Repetir pedido")
                                     }
                                 }
-
                             }
                         }
                     }

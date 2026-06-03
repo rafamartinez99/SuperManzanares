@@ -1,4 +1,4 @@
-package es.iessaladillo.rafamartinez.supermanzanares.ui.screens
+﻿package es.iessaladillo.rafamartinez.supermanzanares.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -15,13 +15,14 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import es.iessaladillo.rafamartinez.supermanzanares.viewmodel.UserViewModel
 import kotlinx.coroutines.launch
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditAddressScreen(
     navController: NavController, userViewModel: UserViewModel
 ) {
-    val user by userViewModel.user.collectAsState()
+    val user by userViewModel.user.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 

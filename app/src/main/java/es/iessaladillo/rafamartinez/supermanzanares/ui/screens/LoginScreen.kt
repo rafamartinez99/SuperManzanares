@@ -1,4 +1,4 @@
-package es.iessaladillo.rafamartinez.supermanzanares.ui.screens
+﻿package es.iessaladillo.rafamartinez.supermanzanares.ui.screens
 
 import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.Image
@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import es.iessaladillo.rafamartinez.supermanzanares.viewmodel.AuthViewModel
 import es.iessaladillo.rafamartinez.supermanzanares.R
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
 fun LoginScreen(
@@ -59,8 +60,8 @@ fun LoginScreen(
     val email = remember { mutableStateOf("") }
     val password = remember { mutableStateOf("") }
     val passwordVisible = remember { mutableStateOf(false) }
-    val authMessage by authViewModel.message.collectAsState()
-    val isAuthenticated by authViewModel.authState.collectAsState()
+    val authMessage by authViewModel.message.collectAsStateWithLifecycle()
+    val isAuthenticated by authViewModel.authState.collectAsStateWithLifecycle()
 
     val focusManager = LocalFocusManager.current
     val passwordFocus = remember { FocusRequester() }

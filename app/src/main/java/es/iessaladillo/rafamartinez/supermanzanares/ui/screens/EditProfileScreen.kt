@@ -1,4 +1,4 @@
-package es.iessaladillo.rafamartinez.supermanzanares.ui.screens
+﻿package es.iessaladillo.rafamartinez.supermanzanares.ui.screens
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import es.iessaladillo.rafamartinez.supermanzanares.viewmodel.UserViewModel
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,7 +35,7 @@ fun EditProfileScreen(
     navController: NavController,
     userViewModel: UserViewModel
 ) {
-    val user by userViewModel.user.collectAsState()
+    val user by userViewModel.user.collectAsStateWithLifecycle()
 
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(

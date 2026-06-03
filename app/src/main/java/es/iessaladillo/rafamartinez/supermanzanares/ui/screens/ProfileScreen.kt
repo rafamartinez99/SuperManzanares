@@ -1,4 +1,4 @@
-package es.iessaladillo.rafamartinez.supermanzanares.ui.screens
+﻿package es.iessaladillo.rafamartinez.supermanzanares.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -49,15 +49,16 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import es.iessaladillo.rafamartinez.supermanzanares.viewmodel.AuthViewModel
 import es.iessaladillo.rafamartinez.supermanzanares.viewmodel.UserViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     navController: NavController, userViewModel: UserViewModel, authViewModel: AuthViewModel
 ) {
-    val user by userViewModel.user.collectAsState()
-    val isAuthenticated by authViewModel.authState.collectAsState()
-    val userMessage by userViewModel.userMessage.collectAsState()
+    val user by userViewModel.user.collectAsStateWithLifecycle()
+    val isAuthenticated by authViewModel.authState.collectAsStateWithLifecycle()
+    val userMessage by userViewModel.userMessage.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var showLogoutDialog by remember { mutableStateOf(false) }
 

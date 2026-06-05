@@ -1,29 +1,32 @@
 package es.iessaladillo.rafamartinez.supermanzanares.ui
 
 import BottomBarsLayer
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
-import androidx.compose.runtime.getValue
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import es.iessaladillo.rafamartinez.supermanzanares.ui.navigation.SuperManzanaresNavGraph
 import es.iessaladillo.rafamartinez.supermanzanares.viewmodel.*
 
+private val routesWithBottomBar = setOf(
+    "home", "categories", "productsByCategory/{categoryId}",
+    "search", "lists", "list_detail/{listId}", "order_history"
+)
+
+private const val BOTTOM_NAV_HEIGHT_DP = 80
+private const val CART_BAR_HEIGHT_DP = 64
 
 @Composable
 fun SuperManzanaresApp(navController: NavHostController = rememberNavController()) {
@@ -38,47 +41,34 @@ fun SuperManzanaresApp(navController: NavHostController = rememberNavController(
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
-    val isCartEmpty by cartViewModel.isCartEmpty.collectAsState()
-    val cartItemCount by cartViewModel.cartItemCount.collectAsState()
-    val totalPrice by cartViewModel.totalPrice.collectAsState()
+    val isCartEmpty by cartViewModel.isCartEmpty.collectAsStateWithLifecycle()
 
-    val showBottomBar by remember(currentRoute) {
-        derivedStateOf {
-            currentRoute !in listOf(
-                "product_detail/{productId}", "cart", "order_confirmation", "order_success"
-            )
-        }
+    val systemNavBarHeight = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val showsBottomBar = currentRoute in routesWithBottomBar
+    val showsCartBar = showsBottomBar && !isCartEmpty
+
+    val targetBottomPadding = when {
+        showsCartBar -> BOTTOM_NAV_HEIGHT_DP.dp + CART_BAR_HEIGHT_DP.dp + systemNavBarHeight
+        showsBottomBar -> BOTTOM_NAV_HEIGHT_DP.dp + systemNavBarHeight
+        else -> systemNavBarHeight
     }
 
-    val showCartBarState by remember(currentRoute, isCartEmpty) {
-        derivedStateOf {
-            !isCartEmpty && currentRoute !in listOf(
-                "cart",
-                "profile",
-                "login",
-                "register",
-                "edit_profile",
-                "edit_name",
-                "edit_password",
-                "edit_email",
-                "edit_address",
-                "add_address_from_edit",
-                "add_address_from_register",
-                "add_address_from_google",
-                "product_detail/{productId}",
-                "order_confirmation",
-                "order_success",
-                "forgot_password"
-            )
-        }
-    }
+    val contentBottomPadding by animateDpAsState(
+        targetValue = targetBottomPadding,
+        animationSpec = tween(durationMillis = 300),
+        label = "contentBottomPadding"
+    )
+
     Box {
         Scaffold(
-            contentWindowInsets = WindowInsets(0)   // importante aquí
+            contentWindowInsets = WindowInsets(0)
         ) { innerPadding ->
             SuperManzanaresNavGraph(
                 navController,
-                innerPadding,
+                PaddingValues(
+                    top = innerPadding.calculateTopPadding(),
+                    bottom = contentBottomPadding
+                ),
                 cartViewModel,
                 authViewModel,
                 productViewModel,
@@ -86,24 +76,13 @@ fun SuperManzanaresApp(navController: NavHostController = rememberNavController(
                 orderViewModel,
                 shoppingListViewModel,
                 categoryViewModel,
-                mapboxViewModel,
-                showBottomBar      // NUEVO
-
+                mapboxViewModel
             )
         }
         BottomBarsLayer(
             navController = navController,
             authViewModel = authViewModel,
-            cartItemCount = cartItemCount,
-            totalPrice = totalPrice,
-            showBottomBar = showBottomBar,
-            showCartBarState = showCartBarState,
+            cartViewModel = cartViewModel,
         )
     }
 }
-
-
-
-
-
-

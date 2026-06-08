@@ -18,13 +18,14 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import es.iessaladillo.rafamartinez.supermanzanares.ui.components.ProductCard
 import es.iessaladillo.rafamartinez.supermanzanares.viewmodel.CartViewModel
@@ -40,11 +41,18 @@ fun ProductsByCategoryScreen(
     navController: NavController,
     categoryViewModel: CategoryViewModel = hiltViewModel()
 ) {
-    val products by productViewModel.products.collectAsState()
-    val filteredProducts = products.filter { it.categoryId == categoryId }
-
-    val categories by categoryViewModel.categories.collectAsState(initial = emptyList())
-    val categoryName = categories.find { it.id == categoryId }?.name ?: "Categoría"
+    val products by productViewModel.products.collectAsStateWithLifecycle()
+    val filteredProducts = remember(products, categoryId) {
+        products.filter { it.categoryId == categoryId }
+    }
+    val cartItems by cartViewModel.cart.collectAsStateWithLifecycle()
+    val cartQuantities = remember(cartItems) {
+        cartItems.associate { (cartItem, _) -> cartItem.productId to cartItem.quantity }
+    }
+    val categories by categoryViewModel.categories.collectAsStateWithLifecycle()
+    val categoryName = remember(categories, categoryId) {
+        categories.find { it.id == categoryId }?.name ?: "Categoría"
+    }
 
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -74,11 +82,18 @@ fun ProductsByCategoryScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(filteredProducts) { product ->
+                items(
+                    items = filteredProducts,
+                    key = { product -> product.id }
+                ) { product ->
+                    val quantity = cartQuantities[product.id] ?: 0
                     ProductCard(
                         product = product,
-                        cartViewModel = cartViewModel,
-                        navController = navController
+                        quantity = quantity,
+                        onAdd = { cartViewModel.addToCart(product.id) },
+                        onRemove = { cartViewModel.decreaseQuantity(product.id) },
+                        navController = navController,
+                        modifier = Modifier.animateItem()
                     )
                 }
             }

@@ -1,11 +1,15 @@
 package es.iessaladillo.rafamartinez.supermanzanares.ui.navigation
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -51,17 +55,30 @@ fun SuperManzanaresNavGraph(
     shoppingListViewModel: ShoppingListViewModel,
     categoryViewModel: CategoryViewModel,
     mapboxViewModel: MapboxViewModel,
-    bottomBarVisible: Boolean
 ) {
-    val contentBottomPadding = if (bottomBarVisible) 80.dp else 0.dp
 
     NavHost(
         navController = navController,
         startDestination = "home",
         modifier = Modifier
             .fillMaxSize()
-            .padding(innerPadding)
-            .padding(bottom = contentBottomPadding)
+            .padding(innerPadding),
+        enterTransition = {
+            slideInHorizontally(initialOffsetX = { it }, animationSpec = tween(300)) +
+                    fadeIn(animationSpec = tween(300))
+        },
+        exitTransition = {
+            slideOutHorizontally(targetOffsetX = { -it / 3 }, animationSpec = tween(300)) +
+                    fadeOut(animationSpec = tween(200))
+        },
+        popEnterTransition = {
+            slideInHorizontally(initialOffsetX = { -it / 3 }, animationSpec = tween(300)) +
+                    fadeIn(animationSpec = tween(300))
+        },
+        popExitTransition = {
+            slideOutHorizontally(targetOffsetX = { it }, animationSpec = tween(300)) +
+                    fadeOut(animationSpec = tween(200))
+        }
     ) {
         composable("home") {
             HomeScreen(productViewModel, cartViewModel, navController)

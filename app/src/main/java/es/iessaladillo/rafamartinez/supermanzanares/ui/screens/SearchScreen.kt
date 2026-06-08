@@ -1,4 +1,4 @@
-package es.iessaladillo.rafamartinez.supermanzanares.ui.screens
+﻿package es.iessaladillo.rafamartinez.supermanzanares.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
@@ -23,11 +23,15 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import coil.size.Precision
 import es.iessaladillo.rafamartinez.supermanzanares.viewmodel.CartViewModel
 import es.iessaladillo.rafamartinez.supermanzanares.viewmodel.ProductViewModel
 import es.iessaladillo.rafamartinez.supermanzanares.utils.normalize
@@ -40,8 +44,12 @@ fun SearchScreen(
 ) {
     var query by remember { mutableStateOf("") }
     val focusRequester = remember { FocusRequester() }
-    val allProducts by viewModel.products.collectAsState()
-    val cartItems by cartViewModel.cart.collectAsState()
+    val allProducts by viewModel.products.collectAsStateWithLifecycle()
+    val cartItems by cartViewModel.cart.collectAsStateWithLifecycle()
+    val cartQuantities = remember(cartItems) {
+        cartItems.associate { (cartItem, _) -> cartItem.productId to cartItem.quantity }
+    }
+    val context = LocalContext.current
     val filteredProducts by remember(query, allProducts) {
         derivedStateOf {
             if (query.length >= 2) {
@@ -82,11 +90,22 @@ fun SearchScreen(
             }
         })
         LazyColumn(modifier = Modifier.fillMaxSize()) {
-            items(filteredProducts) { product ->
-                val cartItem = cartItems.firstOrNull { it.first.productId == product.id }
+            items(
+                items = filteredProducts,
+                key = { product -> product.id }
+            ) { product ->
+                val quantity = cartQuantities[product.id] ?: 0
+                val imageRequest = remember(product.imageUrl) {
+                    ImageRequest.Builder(context)
+                        .data(product.imageUrl)
+                        .size(300, 300)
+                        .precision(Precision.INEXACT)
+                        .crossfade(true)
+                        .build()
+                }
 
                 Surface(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().animateItem(),
                     onClick = { navController.navigate("product_detail/${product.id}") },
                     color = MaterialTheme.colorScheme.surface
                 ) {
@@ -97,7 +116,7 @@ fun SearchScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         AsyncImage(
-                            model = product.imageUrl,
+                            model = imageRequest,
                             contentDescription = product.name,
                             modifier = Modifier
                                 .size(100.dp)
@@ -170,7 +189,7 @@ fun SearchScreen(
                             Spacer(modifier = Modifier.height(8.dp))
 
                             Box(modifier = Modifier.height(32.dp)) {
-                                if (cartItem == null) {
+                                if (quantity == 0) {
                                     Button(
                                         onClick = { cartViewModel.addToCart(product.id) },
                                         modifier = Modifier
@@ -189,13 +208,13 @@ fun SearchScreen(
                                             )
                                         }) {
                                             Icon(
-                                                imageVector = if (cartItem.first.quantity == 1) Icons.Default.Delete else Icons.Default.Remove,
-                                                contentDescription = if (cartItem.first.quantity == 1) "Eliminar" else "Disminuir",
+                                                imageVector = if (quantity == 1) Icons.Default.Delete else Icons.Default.Remove,
+                                                contentDescription = if (quantity == 1) "Eliminar" else "Disminuir",
                                                 tint = MaterialTheme.colorScheme.error
                                             )
                                         }
                                         Text(
-                                            text = "${cartItem.first.quantity} uds.",
+                                            text = "$quantity uds.",
                                             fontSize = 16.sp
                                         )
                                         IconButton(onClick = { cartViewModel.addToCart(product.id) }) {
@@ -218,6 +237,10 @@ fun SearchScreen(
 
             if (filteredProducts.isEmpty() && query.length >= 2) {
                 item {
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = true,
+                        enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.scaleIn(initialScale = 0.85f),
+                    ) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -238,6 +261,7 @@ fun SearchScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
+                    } // AnimatedVisibility
                 }
             }
         }

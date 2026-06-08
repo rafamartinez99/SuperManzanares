@@ -1,6 +1,12 @@
 package es.iessaladillo.rafamartinez.supermanzanares.ui.components
 
-import androidx.compose.foundation.clickable
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -15,12 +21,14 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -30,27 +38,41 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import coil.size.Precision
 import es.iessaladillo.rafamartinez.supermanzanares.data.model.Product
-import es.iessaladillo.rafamartinez.supermanzanares.viewmodel.CartViewModel
 import es.iessaladillo.rafamartinez.supermanzanares.R
 import es.iessaladillo.rafamartinez.supermanzanares.utils.formatPrice
 
 
 @Composable
 fun ProductCard(
-    product: Product, cartViewModel: CartViewModel, navController: NavController
+    product: Product,
+    quantity: Int,
+    onAdd: () -> Unit,
+    onRemove: () -> Unit,
+    navController: NavController,
+    modifier: Modifier = Modifier
 ) {
-    val cartItems by cartViewModel.cart.collectAsState()
-    val cartItem = cartItems.firstOrNull { it.first.productId == product.id }
+    val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
+    val imageRequest = remember(product.imageUrl) {
+        ImageRequest.Builder(context)
+            .data(product.imageUrl)
+            .size(300, 300)
+            .precision(Precision.INEXACT)
+            .crossfade(true)
+            .build()
+    }
 
     Card(
-        modifier = Modifier
+        modifier = modifier
             .padding(8.dp)
             .height(250.dp)
-            .width(200.dp)
-            .clickable { navController.navigate("product_detail/${product.id}") },
+            .width(200.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        onClick = { navController.navigate("product_detail/${product.id}") }
     ) {
         Column(
             modifier = Modifier
@@ -68,7 +90,7 @@ fun ProductCard(
                 Spacer(modifier = Modifier.height(4.dp))
 
                 AsyncImage(
-                    model = product.imageUrl,
+                    model = imageRequest,
                     contentDescription = product.name,
                     contentScale = ContentScale.Fit,
                     placeholder = painterResource(R.drawable.placeholder),
@@ -88,7 +110,6 @@ fun ProductCard(
                 )
             }
 
-            // Zona media: precio
             if (product.discountPrice != null && product.originalPrice != null) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -101,9 +122,7 @@ fun ProductCard(
                         color = Color.Gray,
                         textDecoration = TextDecoration.LineThrough
                     )
-
                     Spacer(modifier = Modifier.width(5.dp))
-
                     Row(verticalAlignment = Alignment.Bottom) {
                         Text(
                             text = formatPrice(product.discountPrice),
@@ -118,7 +137,6 @@ fun ProductCard(
                             color = Color.Gray
                         )
                     }
-
                 }
             } else {
                 Row(verticalAlignment = Alignment.Bottom) {
@@ -134,16 +152,25 @@ fun ProductCard(
                         color = Color.Gray
                     )
                 }
-
             }
 
-            // Zona inferior: botón o cantidad
             Spacer(modifier = Modifier.height(12.dp))
 
-            Box(modifier = Modifier.height(32.dp)) {
-                if (cartItem == null) {
+            AnimatedContent(
+                targetState = quantity == 0,
+                transitionSpec = {
+                    (fadeIn(tween(200)) + scaleIn(tween(200), initialScale = 0.85f)) togetherWith
+                            (fadeOut(tween(150)) + scaleOut(tween(150), targetScale = 0.85f))
+                },
+                label = "add_or_quantity",
+                modifier = Modifier.height(32.dp)
+            ) { isZero ->
+                if (isZero) {
                     Button(
-                        onClick = { cartViewModel.addToCart(product.id) },
+                        onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onAdd()
+                        },
                         shape = RoundedCornerShape(50),
                         modifier = Modifier
                             .fillMaxWidth(0.7f)
@@ -158,23 +185,25 @@ fun ProductCard(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        IconButton(
-                            onClick = { cartViewModel.decreaseQuantity(product.id) }) {
+                        IconButton(onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onRemove()
+                        }) {
                             Icon(
-                                imageVector = if (cartItem.first.quantity == 1) Icons.Default.Delete else Icons.Default.Remove,
-                                contentDescription = if (cartItem.first.quantity == 1) "Eliminar" else "Disminuir",
+                                imageVector = if (quantity == 1) Icons.Default.Delete else Icons.Default.Remove,
+                                contentDescription = if (quantity == 1) "Eliminar" else "Disminuir",
                                 tint = MaterialTheme.colorScheme.error
                             )
                         }
-
                         Text(
-                            text = "${cartItem.first.quantity} uds.",
+                            text = "$quantity uds.",
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp
                         )
-
-                        IconButton(
-                            onClick = { cartViewModel.addToCart(product.id) }) {
+                        IconButton(onClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onAdd()
+                        }) {
                             Icon(Icons.Default.Add, contentDescription = "Aumentar cantidad", tint = MaterialTheme.colorScheme.primary)
                         }
                     }

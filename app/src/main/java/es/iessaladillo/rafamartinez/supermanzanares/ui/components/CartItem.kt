@@ -19,15 +19,21 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import coil.size.Precision
 import es.iessaladillo.rafamartinez.supermanzanares.data.local.CartItemEntity
 import es.iessaladillo.rafamartinez.supermanzanares.data.local.ProductEntity
 import es.iessaladillo.rafamartinez.supermanzanares.utils.formatPrice
@@ -35,6 +41,17 @@ import es.iessaladillo.rafamartinez.supermanzanares.viewmodel.CartViewModel
 
 @Composable
 fun CartItem(cartItem: CartItemEntity, product: ProductEntity?, cartViewModel: CartViewModel, navController: NavController) {
+    val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
+    val imageRequest = remember(product?.imageUrl) {
+        ImageRequest.Builder(context)
+            .data(product?.imageUrl)
+            .size(150, 150)
+            .precision(Precision.INEXACT)
+            .crossfade(true)
+            .build()
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -48,7 +65,7 @@ fun CartItem(cartItem: CartItemEntity, product: ProductEntity?, cartViewModel: C
             verticalAlignment = Alignment.CenterVertically
         ) {
             AsyncImage(
-                model = product?.imageUrl,
+                model = imageRequest,
                 contentDescription = product?.name,
                 modifier = Modifier.size(50.dp)
             )
@@ -106,16 +123,25 @@ fun CartItem(cartItem: CartItemEntity, product: ProductEntity?, cartViewModel: C
             Spacer(modifier = Modifier.width(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (cartItem.quantity > 1) {
-                    IconButton(onClick = { cartViewModel.decreaseQuantity(cartItem.productId) }) {
+                    IconButton(onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        cartViewModel.decreaseQuantity(cartItem.productId)
+                    }) {
                         Icon(Icons.Default.Remove, contentDescription = "Disminuir cantidad", tint = MaterialTheme.colorScheme.error)
                     }
                 } else {
-                    IconButton(onClick = { cartViewModel.removeFromCart(cartItem) }) {
+                    IconButton(onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        cartViewModel.removeFromCart(cartItem)
+                    }) {
                         Icon(Icons.Default.Delete, contentDescription = "Eliminar del carrito", tint = MaterialTheme.colorScheme.error)
                     }
                 }
                 Text(text = "${cartItem.quantity} uds.", fontWeight = FontWeight.Bold)
-                IconButton(onClick = { cartViewModel.addToCart(cartItem.productId) }) {
+                IconButton(onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    cartViewModel.addToCart(cartItem.productId)
+                }) {
                     Icon(Icons.Default.Add, contentDescription = "Aumentar cantidad", tint = MaterialTheme.colorScheme.primary)
                 }
             }

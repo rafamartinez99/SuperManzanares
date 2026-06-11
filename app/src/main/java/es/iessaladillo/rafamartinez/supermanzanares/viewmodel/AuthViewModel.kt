@@ -71,6 +71,16 @@ class AuthViewModel @Inject constructor(
         authRepository.logout()
     }
 
+    fun sendEmailVerification() {
+        viewModelScope.launch {
+            try {
+                FirebaseAuth.getInstance().currentUser?.sendEmailVerification()
+            } catch (e: Exception) {
+                _message.value = e.message
+            }
+        }
+    }
+
     fun clearMessage() {
         _message.value = null
     }

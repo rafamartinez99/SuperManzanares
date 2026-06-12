@@ -1,6 +1,13 @@
-package es.iessaladillo.rafamartinez.supermanzanares.ui.screens
+﻿package es.iessaladillo.rafamartinez.supermanzanares.ui.screens
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -26,6 +33,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextDecoration
@@ -34,6 +44,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import coil.size.Precision
 import es.iessaladillo.rafamartinez.supermanzanares.ui.components.FullScreenZoomImage
 import es.iessaladillo.rafamartinez.supermanzanares.ui.components.ProductCard
 import es.iessaladillo.rafamartinez.supermanzanares.utils.formatPrice
@@ -52,18 +64,23 @@ fun ProductDetailScreen(
     cartViewModel: CartViewModel,
     shoppingListViewModel: ShoppingListViewModel
 ) {
-        val productFlow =
-            remember(productViewModel, productId) { productViewModel.getProductById(productId) }
-        val cartItemFlow =
-            remember(cartViewModel, productId) { cartViewModel.getCartItemById(productId) }
+    val productFlow =
+        remember(productViewModel, productId) { productViewModel.getProductById(productId) }
+    val cartItemFlow =
+        remember(cartViewModel, productId) { cartViewModel.getCartItemById(productId) }
+    val relatedProductsFlow =
+        remember(productViewModel, productId) { productViewModel.getRelatedProducts(productId) }
 
-        val product by productFlow.collectAsStateWithLifecycle(initialValue = null)
-        val cartItem by cartItemFlow.collectAsStateWithLifecycle(initialValue = null)
-    val relatedProducts by productViewModel.getRelatedProducts(productId).collectAsStateWithLifecycle()
+    val product by productFlow.collectAsStateWithLifecycle(initialValue = null)
+    val cartItem by cartItemFlow.collectAsStateWithLifecycle(initialValue = null)
+    val relatedProducts by relatedProductsFlow.collectAsStateWithLifecycle()
+    val cartItems by cartViewModel.cart.collectAsStateWithLifecycle()
+    val cartQuantities = remember(cartItems) {
+        cartItems.associate { (cartItem, _) -> cartItem.productId to cartItem.quantity }
+    }
 
 
-
-    val shoppingLists by shoppingListViewModel.shoppingLists.collectAsState(initial = emptyList())
+    val shoppingLists by shoppingListViewModel.shoppingLists.collectAsStateWithLifecycle()
     var showSaveDialog by remember { mutableStateOf(false) }
     var savedListName by remember { mutableStateOf("") }
     var newListName by remember { mutableStateOf("") }
@@ -72,8 +89,26 @@ fun ProductDetailScreen(
     var expanded by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
+
+    if (product == null) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        return
+    }
 
     product?.let { selectedProduct ->
+        val productImageRequest = remember(selectedProduct.imageUrl) {
+            ImageRequest.Builder(context)
+                .data(selectedProduct.imageUrl)
+                .size(900, 900)
+                .precision(Precision.INEXACT)
+                .crossfade(true)
+                .build()
+        }
+
         Column(modifier = Modifier.fillMaxSize()) {
             TopAppBar(title = {
                 Text(
@@ -89,7 +124,7 @@ fun ProductDetailScreen(
             ) {
                 item {
                     AsyncImage(
-                        model = selectedProduct.imageUrl,
+                        model = productImageRequest,
                         contentDescription = selectedProduct.name,
                         contentScale = ContentScale.Fit,
                         modifier = Modifier
@@ -116,7 +151,9 @@ fun ProductDetailScreen(
                             Text(
                                 "${
                                     String.format(
-                                        Locale.forLanguageTag("es-ES"), "%.2f", selectedProduct.weight
+                                        Locale.forLanguageTag("es-ES"),
+                                        "%.2f",
+                                        selectedProduct.weight
                                     )
                                 } kg | ${
                                     String.format(
@@ -157,7 +194,9 @@ fun ProductDetailScreen(
                             } else {
                                 Row(verticalAlignment = Alignment.Bottom) {
                                     Text(
-                                        text = formatPrice(selectedProduct.price), fontSize = 18.sp, fontWeight = FontWeight.Bold
+                                        text = formatPrice(selectedProduct.price),
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.Bold
                                     )
                                     Text(
                                         text = "/ud",
@@ -189,59 +228,65 @@ fun ProductDetailScreen(
 
                             Spacer(modifier = Modifier.height(16.dp))
 
-                            if (cartItem == null) {
-                                Button(
-                                    onClick = { cartViewModel.addToCart(selectedProduct.id) },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(50)
-                                ) {
-                                    Text("Añadir al carrito")
-                                }
-                            } else {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Text(
-                                        "En carrito", fontWeight = FontWeight.Bold, fontSize = 18.sp
-                                    )
-
-                                    Spacer(modifier = Modifier.width(16.dp))
-
-                                    IconButton(
+                            AnimatedContent(
+                                targetState = cartItem == null,
+                                transitionSpec = {
+                                    (fadeIn(tween(200)) + scaleIn(tween(200), initialScale = 0.85f)) togetherWith
+                                            (fadeOut(tween(150)) + scaleOut(tween(150), targetScale = 0.85f))
+                                },
+                                label = "cart_action"
+                            ) { isNull ->
+                                if (isNull) {
+                                    Button(
                                         onClick = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            cartViewModel.addToCart(selectedProduct.id)
+                                        },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(50)
+                                    ) {
+                                        Text("Añadir al carrito")
+                                    }
+                                } else {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text(
+                                            "En carrito",
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 18.sp
+                                        )
+                                        Spacer(modifier = Modifier.width(16.dp))
+                                        IconButton(onClick = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                             if (cartItem?.quantity == 1) {
                                                 cartViewModel.removeFromCart(selectedProduct.id)
                                             } else {
                                                 cartViewModel.decreaseQuantity(selectedProduct.id)
                                             }
                                         }) {
-                                        Icon(
-                                            imageVector = if (cartItem?.quantity == 1) Icons.Default.Delete else Icons.Default.Remove,
-                                            contentDescription = if (cartItem?.quantity == 1) "Eliminar" else "Disminuir",
-                                            tint = MaterialTheme.colorScheme.error
+                                            Icon(
+                                                imageVector = if (cartItem?.quantity == 1) Icons.Default.Delete else Icons.Default.Remove,
+                                                contentDescription = if (cartItem?.quantity == 1) "Eliminar" else "Disminuir",
+                                                tint = MaterialTheme.colorScheme.error
+                                            )
+                                        }
+                                        Text(
+                                            "${cartItem?.quantity ?: 0} uds.",
+                                            fontSize = 20.sp,
+                                            fontWeight = FontWeight.Bold
                                         )
-                                    }
-
-                                    Spacer(modifier = Modifier.width(8.dp))
-
-                                    Text(
-                                        "${cartItem?.quantity ?: 0} uds.",
-                                        fontSize = 20.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-
-                                    Spacer(modifier = Modifier.width(8.dp))
-
-                                    IconButton(
-                                        onClick = {
+                                        IconButton(onClick = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                             cartViewModel.addToCart(selectedProduct.id)
                                         }) {
-                                        Icon(
-                                            Icons.Default.Add,
-                                            contentDescription = "Añadir",
-                                            tint = MaterialTheme.colorScheme.primary
-                                        )
+                                            Icon(
+                                                Icons.Default.Add,
+                                                contentDescription = "Añadir",
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -341,16 +386,18 @@ fun ProductDetailScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         items(relatedProducts, key = { it.id }) { relatedProduct ->
-                            ProductCard(relatedProduct, cartViewModel, navController)
+                            ProductCard(
+                                product = relatedProduct,
+                                quantity = cartQuantities[relatedProduct.id] ?: 0,
+                                onAdd = { cartViewModel.addToCart(relatedProduct.id) },
+                                onRemove = { cartViewModel.decreaseQuantity(relatedProduct.id) },
+                                navController = navController
+                            )
                         }
                     }
                 }
                 item {
-                    Spacer(
-                        modifier = Modifier
-                            .navigationBarsPadding()
-                            .height(8.dp)
-                    )
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
             }
         }
@@ -373,14 +420,14 @@ fun ProductDetailScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
                     LazyColumn {
-                        items(shoppingLists) { list ->
+                        items(shoppingLists, key = { it.id }) { list ->
                             var isInList by remember { mutableStateOf(false) }
 
                             LaunchedEffect(list.id) {
                                 isInList = shoppingListViewModel.isProductInList(list.id, productId)
                             }
 
-                            Row(modifier = Modifier
+                            Row(modifier = Modifier.animateItem()
                                 .fillMaxWidth()
                                 .clickable {
                                     if (!isInList) {
@@ -407,7 +454,11 @@ fun ProductDetailScreen(
                                     modifier = Modifier.weight(1f)
                                 )
                                 if (isInList) {
-                                    Text("✔ En la lista", color = Color.Green)
+                                    Text(
+                                        "✔ En la lista",
+                                        color = MaterialTheme.colorScheme.primary,
+                                        style = MaterialTheme.typography.labelMedium
+                                    )
                                 }
                             }
                         }
@@ -425,7 +476,9 @@ fun ProductDetailScreen(
                         keyboardActions = KeyboardActions(onDone = {
                             if (newListName.isNotBlank()) {
                                 coroutineScope.launch {
-                                    shoppingListViewModel.createListAndAddProduct(newListName, productId)
+                                    shoppingListViewModel.createListAndAddProduct(
+                                        newListName, productId
+                                    )
                                     savedListName = newListName
                                     newListName = ""
                                     showSaveDialog = false
@@ -441,7 +494,9 @@ fun ProductDetailScreen(
                         onClick = {
                             if (newListName.isNotBlank()) {
                                 coroutineScope.launch {
-                                    shoppingListViewModel.createListAndAddProduct(newListName, productId)
+                                    shoppingListViewModel.createListAndAddProduct(
+                                        newListName, productId
+                                    )
                                     savedListName = newListName
                                     newListName = ""
                                     showSaveDialog = false
@@ -473,8 +528,7 @@ fun ProductDetailScreen(
 
         if (showFullScreenImage) {
             FullScreenZoomImage(
-                imageUrl = selectedProduct.imageUrl, onDismiss = { showFullScreenImage = false }
-            )
+                imageUrl = selectedProduct.imageUrl, onDismiss = { showFullScreenImage = false })
         }
 
 

@@ -32,3 +32,6 @@ app/google-services.json
 secrets.properties
 
 !.gitignore
+
+# Backup
+*.zip

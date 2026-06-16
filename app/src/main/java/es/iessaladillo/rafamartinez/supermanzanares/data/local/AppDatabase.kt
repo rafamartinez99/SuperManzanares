@@ -24,8 +24,8 @@ abstract class AppDatabase : RoomDatabase() {
 
         fun getDatabase(context: Context): AppDatabase = INSTANCE ?: synchronized(this) {
             val instance = Room.databaseBuilder(
-                        context.applicationContext, AppDatabase::class.java, "supermanzanares_db"
-                    ).fallbackToDestructiveMigration(false).build()
+                context.applicationContext, AppDatabase::class.java, "supermanzanares_db"
+            ).fallbackToDestructiveMigration(false).build()
             INSTANCE = instance
             instance
         }

@@ -71,9 +71,18 @@ fun ListDetailScreen(
         }
     }
 
-    @Suppress("UnusedMaterial3ScaffoldPaddingParameter")
     Scaffold(
         contentWindowInsets = WindowInsets(0),
+        topBar = {
+            TopAppBar(
+                title = { Text(listName, fontSize = 20.sp, fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                    }
+                }
+            )
+        },
         snackbarHost = {
             SnackbarHost(snackbarHostState) { data ->
                 Snackbar(
@@ -83,17 +92,8 @@ fun ListDetailScreen(
                 )
             }
         }
-    ) { _ ->
-    Column(modifier = Modifier.fillMaxSize()) {
-        TopAppBar(title = {
-            Text(
-                listName, fontSize = 20.sp, fontWeight = FontWeight.Bold
-            )
-        }, navigationIcon = {
-            IconButton(onClick = { navController.popBackStack() }) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
-            }
-        })
+    ) { innerPadding ->
+    Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
         Column(
             modifier = Modifier.fillMaxSize()
         ) {

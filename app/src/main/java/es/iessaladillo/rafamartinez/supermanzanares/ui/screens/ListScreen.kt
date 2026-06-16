@@ -91,9 +91,23 @@ fun ListScreen(shoppingListViewModel: ShoppingListViewModel, navController: NavC
         }
     }
 
-    @Suppress("UnusedMaterial3ScaffoldPaddingParameter")
     Scaffold(
         contentWindowInsets = WindowInsets(0),
+        topBar = {
+            TopAppBar(
+                title = { Text("Listas", fontSize = 20.sp, fontWeight = FontWeight.Bold) },
+                actions = {
+                    Text(
+                        text = "Crear lista",
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .padding(end = 16.dp)
+                            .clickable { showDialog = true }
+                    )
+                }
+            )
+        },
         snackbarHost = {
             SnackbarHost(snackbarHostState) { data ->
                 Snackbar(
@@ -103,22 +117,8 @@ fun ListScreen(shoppingListViewModel: ShoppingListViewModel, navController: NavC
                 )
             }
         }
-    ) { _ ->
-    Column(modifier = Modifier.fillMaxSize()) {
-        TopAppBar(title = {
-            Text(
-                "Listas", fontSize = 20.sp, fontWeight = FontWeight.Bold
-            )
-        }, actions = {
-            Text(
-                text = "Crear lista",
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier
-                    .padding(end = 16.dp)
-                    .clickable { showDialog = true })
-        })
-
+    ) { innerPadding ->
+    Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
         Box(modifier = Modifier.weight(1f)) {
             if (shoppingLists.isEmpty()) {
                 Column(

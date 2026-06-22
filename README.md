@@ -5,7 +5,7 @@
 ![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white)
 ![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)
 
-Aplicación de supermercado desarrollada en Android con **Jetpack Compose** y **MVVM + Clean Architecture**. Proyecto final de grado (TFG) del ciclo superior de DAM.
+Aplicación de supermercado desarrollada en Android con **Jetpack Compose** y la **arquitectura recomendada por Google (MVVM + Repository)**. Proyecto final de grado (TFG) del ciclo superior de DAM.
 
 ---
 
@@ -15,11 +15,11 @@ Aplicación de supermercado desarrollada en Android con **Jetpack Compose** y **
 |--------|---------|---------------------|
 | ![home](img/home.webp) | ![cart](img/cart.webp) | ![detail](img/detail.webp) |
 
-| Listas de compra | Inicio de sesion | Perfil |
+| Listas de compra | Inicio de sesión | Perfil |
 |-----------------|---------------------|--------|
 | ![lists](img/lists.webp) | ![login](img/login.webp) | ![profile](img/profile.webp) |
 
-| Buscador | Categorias | Direccion |
+| Buscador | Categorías | Dirección |
 |-----------------|---------------------|--------|
 | ![search](img/search.webp) | ![category](img/category.webp) | ![address](img/address.webp) |
 
@@ -79,7 +79,7 @@ Repository
 |------|-----------|
 | UI | Jetpack Compose + Material3 |
 | Lenguaje | Kotlin |
-| Arquitectura | MVVM + Clean Architecture |
+| Arquitectura | MVVM + Repository (recomendada por Google) |
 | Inyección de dependencias | Hilt |
 | Base de datos local | Room |
 | Backend / Auth | Firebase Firestore + Firebase Auth |
@@ -90,9 +90,11 @@ Repository
 
 ---
 
-## ⚠️ Ficheros no incluidos en el repositorio
+## Ficheros no incluidos en el repositorio
 
-Dos ficheros con credenciales están excluidos del control de versiones. Es necesario crearlos antes de compilar.
+> [!IMPORTANT]
+> Dos ficheros con credenciales están excluidos del control de versiones.
+> **Hay que crearlos antes de compilar** o la app no arrancará.
 
 ### `app/google-services.json`
 
@@ -110,8 +112,9 @@ Crea el fichero con este contenido mínimo:
 </resources>
 ```
 
-- `mapbox_access_token`: obténlo en [account.mapbox.com](https://account.mapbox.com) → Tokens.
-- `default_web_client_id`: Consola de Firebase → Autenticación → Método de inicio de sesión → Google → ID de cliente web.
+> [!TIP]
+> - **`mapbox_access_token`**: obtenlo en [account.mapbox.com](https://account.mapbox.com) → Tokens.
+> - **`default_web_client_id`**: Consola de Firebase → Autenticación → Método de inicio de sesión → Google → ID de cliente web.
 
 ---
 
@@ -129,7 +132,7 @@ Crea el fichero con este contenido mínimo:
 
 ## Decisiones de diseño destacadas
 
-- **Datos de productos en JSON**: los 55 productos se cargan desde `assets/default_products.json` con carga lazy mediante Gson, reduciendo `ProductRepository` de 1 471 a 93 líneas.
+- **Datos de productos en JSON**: los 55 productos se cargan desde `assets/default_products.json` con carga lazy mediante Gson, reduciendo `ProductRepository` de 1471 a 93 líneas.
 - **Insets dinámicos**: el padding inferior del contenido se calcula en `SuperManzanaresApp` con `animateDpAsState` para suavizar la aparición/desaparición de la barra del carrito (80 dp navBar + 64 dp cartBar + altura de la barra del sistema).
 - **Scroll-to-top sin re-navegar**: cuando el usuario pulsa la pestaña activa en la bottom bar se emite un evento en `NavigationEvents.scrollToTop` (SharedFlow) en lugar de navegar de nuevo, evitando la animación de transición innecesaria.
 - **Error handling centralizado**: cada ViewModel expone un `errorMessage: StateFlow<String?>` que las pantallas consumen con un Snackbar, sin propagar excepciones a la capa UI.
